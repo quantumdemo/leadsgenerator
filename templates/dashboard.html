@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AfixTech Lead Finder{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Configuration Missing Banner -->
+    {% if db_error %}
+        <div class="bg-rose-950 border-2 border-rose-600 text-rose-200 p-6 rounded-xl shadow-xl">
+            <div class="flex items-start space-x-4">
+                <div class="p-3 bg-rose-900 rounded-lg text-rose-300 text-2xl">
+                    <i class="fa-solid fa-database-triangle"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Database Connection Required</h3>
+                    <p class="mt-1 text-sm text-rose-300">
+                        AfixTech Business Lead Finder requires a live <strong>Supabase PostgreSQL database connection</strong>. Mock data and SQLite fallbacks are strictly disabled.
+                    </p>
+                    <p class="mt-2 text-xs font-mono bg-rose-900/50 p-2 rounded border border-rose-700">
+                        Error: {{ db_error }}
+                    </p>
+                    <p class="mt-3 text-sm text-rose-200">
+                        Please set your <code class="bg-rose-900 px-2 py-0.5 rounded font-mono text-white">DATABASE_URL</code> in <code class="bg-rose-900 px-2 py-0.5 rounded font-mono text-white">.env</code> to connect to Supabase.
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not has_api_key %}
+        <div class="bg-amber-950 border-2 border-amber-600 text-amber-200 p-6 rounded-xl shadow-xl">
+            <div class="flex items-start space-x-4">
+                <div class="p-3 bg-amber-900 rounded-lg text-amber-300 text-2xl">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Google Places API Key Required</h3>
+                    <p class="mt-1 text-sm text-amber-300">
+                        Add API key to <code class="bg-amber-900 px-2 py-0.5 rounded font-mono text-white">.env</code> (<code class="bg-amber-900 px-2 py-0.5 rounded font-mono text-white">GOOGLE_PLACES_API_KEY</code>) to fetch real Google Maps business listings. Simulation and mock data are completely disabled.
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Step 1 & 2: Search Input Card -->
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg">
+        <h2 class="text-lg font-bold text-white flex items-center mb-4">
+            <i class="fa-solid fa-magnifying-glass-location text-blue-500 mr-2"></i> Step 1 & 2: Discover Business Listings
+        </h2>
+        <form action="/search" method="POST" class="space-y-4">
+            <div class="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-4">
+                <div class="flex-grow">
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Paste Google Maps Search URL or Search Phrase</label>
+                    <input type="text" name="search_input" required placeholder="e.g. google.com/maps/search/restaurants+in+Lagos OR car repair workshops in Ikeja"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="w-full md:w-48">
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Max Listings</label>
+                    <select name="max_results" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                        <option value="10">10 Listings</option>
+                        <option value="20" selected>20 Listings</option>
+                        <option value="50">50 Listings</option>
+                        <option value="100">100 Listings</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" {% if not has_api_key or db_error %}disabled{% endif %}
+                        class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg flex items-center justify-center transition">
+                        <i class="fa-solid fa-bolt mr-2"></i> Extract & Process
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Step 14: Analytics Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl">
+            <p class="text-xs font-medium text-gray-400">Total Discovered</p>
+            <p class="text-2xl font-bold text-white mt-1">{{ stats.get('total_discovered', 0) }}</p>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl">
+            <p class="text-xs font-medium text-amber-400">No / Broken Website</p>
+            <p class="text-2xl font-bold text-amber-400 mt-1">{{ stats.get('no_website_count', 0) }}</p>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl">
+            <p class="text-xs font-medium text-emerald-400">Emails Extracted</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1">{{ stats.get('emails_count', 0) }}</p>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl">
+            <p class="text-xs font-medium text-blue-400">Outreach Sent</p>
+            <p class="text-2xl font-bold text-blue-400 mt-1">{{ stats.get('contacted_count', 0) }}</p>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl">
+            <p class="text-xs font-medium text-purple-400">Projects Won</p>
+            <p class="text-2xl font-bold text-purple-400 mt-1">{{ stats.get('won_count', 0) }}</p>
+        </div>
+    </div>
+
+    <!-- Step 10 & 14: Interactive Lead Table & Filters -->
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 class="text-lg font-bold text-white flex items-center">
+                <i class="fa-solid fa-list-check text-blue-500 mr-2"></i> Prospect Pipeline Table
+            </h2>
+            <!-- Filters -->
+            <form method="GET" action="/" class="flex flex-wrap items-center gap-3">
+                <input type="text" name="query" value="{{ query_filter }}" placeholder="Filter by name/category..."
+                    class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+                <select name="priority" onchange="this.form.submit()" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                    <option value="">All Priorities</option>
+                    <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High Priority</option>
+                    <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium Priority</option>
+                    <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low Priority</option>
+                </select>
+                <select name="status" onchange="this.form.submit()" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                    <option value="">All Web Statuses</option>
+                    <option value="No website listed" {% if status_filter == 'No website listed' %}selected{% endif %}>No Website</option>
+                    <option value="Website unavailable or inaccessible" {% if status_filter == 'Website unavailable or inaccessible' %}selected{% endif %}>Broken Website</option>
+                    <option value="Website listed" {% if status_filter == 'Website listed' %}selected{% endif %}>Website Listed</option>
+                </select>
+                {% if query_filter or priority_filter or status_filter %}
+                    <a href="/" class="text-xs text-gray-400 hover:text-white underline">Clear Filters</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-300">
+                <thead class="bg-gray-900 text-xs uppercase text-gray-400 font-semibold border-b border-gray-700">
+                    <tr>
+                        <th class="py-3 px-4">Business</th>
+                        <th class="py-3 px-4">Contact Details</th>
+                        <th class="py-3 px-4">Website Status</th>
+                        <th class="py-3 px-4">Priority Score</th>
+                        <th class="py-3 px-4">Outreach Status</th>
+                        <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/50">
+                    {% for lead in leads %}
+                        <tr class="hover:bg-gray-750 transition">
+                            <td class="py-3 px-4">
+                                <p class="font-bold text-white">{{ lead.business_name }}</p>
+                                <p class="text-xs text-gray-400">{{ lead.business_category or 'Uncategorized' }}</p>
+                                <p class="text-xs text-gray-500 truncate max-w-xs">{{ lead.business_address or '' }}</p>
+                            </td>
+                            <td class="py-3 px-4 space-y-1">
+                                <p class="text-xs"><i class="fa-solid fa-phone text-gray-500 mr-1"></i> {{ lead.phone_number or 'N/A' }}</p>
+                                <p class="text-xs"><i class="fa-solid fa-envelope text-gray-500 mr-1"></i> {{ lead.email_address or 'Not Found' }}</p>
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if lead.website_status == 'No website listed' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-900/60 text-rose-300 border border-rose-700">
+                                        No Website Listed
+                                    </span>
+                                {% elif lead.website_status == 'Website unavailable or inaccessible' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-900/60 text-amber-300 border border-amber-700">
+                                        Broken / Inaccessible
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-900/60 text-emerald-300 border border-emerald-700">
+                                        Website Active
+                                    </span>
+                                {% endif %}
+                                <p class="text-[10px] text-gray-500 mt-1">{{ lead.website_verification_status }}</p>
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono font-bold text-lg
+                                        {% if lead.lead_priority_category == 'High' %}text-rose-400{% elif lead.lead_priority_category == 'Medium' %}text-amber-400{% else %}text-gray-400{% endif %}">
+                                        {{ lead.lead_priority_score }}
+                                    </span>
+                                    <span class="text-xs px-2 py-0.5 rounded font-semibold
+                                        {% if lead.lead_priority_category == 'High' %}bg-rose-950 text-rose-300 border border-rose-800{% elif lead.lead_priority_category == 'Medium' %}bg-amber-950 text-amber-300 border border-amber-800{% else %}bg-gray-900 text-gray-400 border border-gray-700{% endif %}">
+                                        {{ lead.lead_priority_category }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-gray-900 text-gray-300 border border-gray-700">
+                                    {{ lead.outreach_status }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <a href="/lead/{{ lead.id }}" class="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded font-medium inline-flex items-center transition">
+                                    Manage <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-gray-500">
+                                <i class="fa-solid fa-folder-open text-4xl mb-3 block text-gray-600"></i>
+                                No business leads found in Supabase database. Use the search box above to run a live Google Places query.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
